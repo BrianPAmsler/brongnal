@@ -6,6 +6,7 @@ use proto::service::brongnal_client::BrongnalClient;
 use std::io::stdin;
 use std::io::BufRead;
 use std::io::BufReader;
+use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::{env, thread};
@@ -55,8 +56,12 @@ async fn main() -> Result<()> {
     info!("Registering {name} at {addr}");
 
     let mut stub = BrongnalClient::connect(addr).await?;
-    let xdg_dirs = xdg::BaseDirectories::with_prefix("brongnal")?;
-    let db_path = xdg_dirs.place_data_file(format!("{}_keys.sqlite", name))?;
+    // let xdg_dirs = xdg::BaseDirectories::with_prefix("brongnal")?;
+    // let db_path = xdg_dirs.place_data_file(format!("{}_keys.sqlite", name))?;
+    let dirs = directories::BaseDirs::new().unwrap(); // xdg does not support windows
+    let db_path = { let mut buf = PathBuf::from(dirs.data_dir()); buf.push("brongnal"); buf.push(format!("{}_keys.sqlite", name)); buf }; // Why isn't there a macro for this? It seems so obvious...
+    println!("path: {:?}", &db_path.parent().unwrap());
+    std::fs::create_dir_all(&db_path.parent().unwrap())?;
     let client = Arc::new(X3DHClient::new(Connection::open(db_path).await?).await?);
 
     register(&mut stub, &client.clone(), name.clone()).await?;

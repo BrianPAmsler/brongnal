@@ -50,11 +50,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .unwrap();
     let server_addr = (IpAddr::V4(Ipv4Addr::UNSPECIFIED), 8080).into();
 
-    let xdg_dirs = xdg::BaseDirectories::with_prefix("brongnal")?;
+    // let xdg_dirs = xdg::BaseDirectories::with_prefix("brongnal")?;
+    let dirs = directories::BaseDirs::new().unwrap(); // xdg does not support windows
+    let mut dirs = { let mut buf = PathBuf::from(dirs.data_dir()); buf.push("brongnal"); buf };
     let db_path: PathBuf = if let Ok(db_dir) = std::env::var("DB") {
         [&db_dir, "brongnal.db3"].iter().collect()
     } else {
-        xdg_dirs.place_data_file("brongnal_server.db3").unwrap()
+        std::fs::create_dir_all(&dirs)?;
+        dirs.push("brongnal_server.db3");
+        dirs
     };
     info!("Database Path: {}", db_path.display());
     let connection = Connection::open(db_path).await?;
